@@ -55,6 +55,30 @@ RCT_EXPORT_METHOD(complete:(NSNumber *_Nonnull)status promiseWithResolver:(RCTPr
     }
 }
 
+
+- (NSString *)getPaymentMethod:(PKPaymentMethodType)type
+API_AVAILABLE(ios(9.0)){
+    NSString *result = @"unknown";
+    switch(type) {
+        case PKPaymentMethodTypeUnknown:
+            result = @"unknown";
+            break;
+        case PKPaymentMethodTypeDebit:
+                result = @"debit";
+                break;
+        case PKPaymentMethodTypeCredit:
+            result = @"credit";
+            break;
+        case PKPaymentMethodTypePrepaid:
+            result = @"prepaid";
+            break;
+        case PKPaymentMethodTypeStore:
+            result = @"store";
+            break;
+        }
+    return result;
+}
+
 - (NSArray *_Nonnull)getSupportedNetworks:(NSDictionary *_Nonnull)props
 {
     NSMutableDictionary *supportedNetworksMapping = [[NSMutableDictionary alloc] init];
@@ -126,7 +150,19 @@ RCT_EXPORT_METHOD(complete:(NSNumber *_Nonnull)status promiseWithResolver:(RCTPr
     self.completion = completion;
     if (self.requestPaymentResolve != NULL) {
         NSString *paymentData = [[NSString alloc] initWithData:payment.token.paymentData encoding:NSUTF8StringEncoding];
-        self.requestPaymentResolve(paymentData);
+        NSString *transactionIdentifier = payment.token.transactionIdentifier;
+        NSString *displayName = @"";
+        NSString *network = @"";
+        NSString *type = @"";
+        if (@available(iOS 9.0, *)) {
+            displayName = payment.token.paymentMethod.displayName;
+            network = payment.token.paymentMethod.network;
+            PKPaymentMethodType paymentTokenPaymentMethodType = payment.token.paymentMethod.type;
+            NSString *tokenPaymentMethodType = [self getPaymentMethod: paymentTokenPaymentMethodType];
+            type = [NSString stringWithFormat:@"%@", tokenPaymentMethodType];
+        }
+        NSString *token = [NSString stringWithFormat:@"{\"token\":{\"paymentData\":%@,\"transactionIdentifier\":\"%@\",\"paymentMethod\":{\"displayName\":\"%@\",\"network\":\"%@\",\"type\":\"%@\"}}}", paymentData, transactionIdentifier, displayName, network, type];
+        self.requestPaymentResolve(token);
         self.requestPaymentResolve = NULL;
     }
 }
